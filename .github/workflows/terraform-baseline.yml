@@ -1,0 +1,84 @@
+name: Terraform Baseline Workflow
+
+on:
+  workflow_call:
+    inputs:
+      working-directory:
+        description: Working directory for Terraform commands
+        type: string
+        default: '.'
+        required: false
+      state-key-prefix:
+        description: Prefix for Terraform state key (e.g., 'security', 'networking')
+        type: string
+        required: true
+      tfvars-path:
+        description: Path to directory containing per-account .tfvars files
+        type: string
+        required: true
+      tf_version:
+        description: Terraform version to use
+        type: string
+        default: '1.15.4'
+        required: false
+      action:
+        description: Terraform action to perform
+        type: string
+        default: 'plan'
+        required: false
+
+jobs:
+  baseline:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Resolve account from branch
+        run: |
+          SLUG=$(echo "$GITHUB_REF_NAME" | sed 's|account/||')
+          echo "SLUG=$SLUG" >> "$GITHUB_ENV"
+          echo "Resolved account slug: $SLUG"
+      - name: Resolve account ID
+        env:
+          ACCOUNT_MAPPINGS: ${{ vars.BASELINE_ACCOUNT_MAPPINGS }}
+        run: |
+          which jq >/dev/null 2>&1 || { echo "jq not found — required to parse BASELINE_ACCOUNT_MAPPINGS"; exit 1; }
+          if [ -z "$ACCOUNT_MAPPINGS" ]; then
+            echo "BASELINE_ACCOUNT_MAPPINGS is not set — configure it as a GitHub org variable before triggering the workflow"
+            exit 1
+          fi
+          ACCOUNT_ID=$(echo "$ACCOUNT_MAPPINGS" | jq -r --arg slug "$SLUG" '.[$slug]')
+          if [ -z "$ACCOUNT_ID" ] || [ "$ACCOUNT_ID" = "null" ]; then
+            echo "Account slug '$SLUG' not found in BASELINE_ACCOUNT_MAPPINGS — add it before triggering the workflow"
+            exit 1
+          fi
+          echo "ACCOUNT_ID=$ACCOUNT_ID" >> "$GITHUB_ENV"
+          echo "Resolved account ID: $ACCOUNT_ID"
+      - name: Construct role ARN
+        run: |
+          ROLE_ARN=arn:aws:iam::${ACCOUNT_ID}:role/${{ vars.OIDC_ROLE_NAME }}
+          echo "ROLE_ARN=$ROLE_ARN" >> "$GITHUB_ENV"
+          echo "Constructed role ARN: $ROLE_ARN"
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.ROLE_ARN }}
+          aws-region: us-west-2
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ inputs.tf_version }}
+      - name: Terraform Init
+        working-directory: ${{ inputs.working-directory }}
+        run: terraform init -backend-config="key=${{ inputs.state-key-prefix }}/$SLUG/terraform.tfstate"
+      - name: Terraform Plan
+        if: github.event_name == 'push' || inputs.action == 'plan'
+        working-directory: ${{ inputs.working-directory }}
+        run: terraform plan -var-file="${{ inputs.tfvars-path }}/$SLUG.tfvars"
+      - name: Terraform Apply
+        if: inputs.action == 'apply'
+        working-directory: ${{ inputs.working-directory }}
+        run: terraform apply -auto-approve -var-file="${{ inputs.tfvars-path }}/$SLUG.tfvars"
