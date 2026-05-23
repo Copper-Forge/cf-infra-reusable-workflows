@@ -3,10 +3,6 @@ name: Terraform Baseline Workflow
 on:
   workflow_call:
     inputs:
-      aws-role-to-assume:
-        description: AWS role ARN to assume for backend access and Terraform execution
-        type: string
-        required: true
       state-key-prefix:
         description: Prefix for Terraform state key (e.g., 'security', 'networking')
         type: string
@@ -54,7 +50,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ inputs.aws-role-to-assume }}
+          role-to-assume: ${{ secrets.SHARED_SERVICES_OIDC_ARN }}
           aws-region: ${{ inputs.aws-region }}
       - name: Checkout
         uses: actions/checkout@v4
