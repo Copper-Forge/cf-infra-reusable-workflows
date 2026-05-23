@@ -26,6 +26,10 @@ on:
         type: string
         default: 'plan'
         required: false
+      environment-slug:
+        description: Slug to identify the environment/account for lookup
+        type: string
+        required: true
 
 permissions:
   id-token: write
@@ -37,7 +41,7 @@ jobs:
     steps:
       - name: Resolve account from branch
         run: |
-          SLUG=$(echo "$GITHUB_REF_NAME" | sed 's|account/||')
+          SLUG=${{ inputs.environment-slug }}
           echo "SLUG=$SLUG" >> "$GITHUB_ENV"
           echo "Resolved account slug: $SLUG"
       - name: Resolve account ID
