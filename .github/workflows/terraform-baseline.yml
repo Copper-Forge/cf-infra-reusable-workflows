@@ -27,12 +27,13 @@ on:
         default: 'plan'
         required: false
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   baseline:
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
     steps:
       - name: Resolve account from branch
         run: |
