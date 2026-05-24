@@ -1,0 +1,75 @@
+name: SAM Application Deploy
+
+on:
+  workflow_call:
+    inputs:
+      config-env:
+        description: SAM config environment (e.g., 'dev', 'prod')
+        type: string
+        required: true
+      stack-name:
+        description: CloudFormation stack name for output resolution
+        type: string
+        required: true
+      aws-region:
+        description: AWS region for credentials and SAM deployment
+        type: string
+        default: 'us-east-1'
+        required: false
+      node-version:
+        description: Node.js version for build
+        type: string
+        default: '22'
+        required: false
+      aws-deploy-role-arn:
+        description: AWS IAM role ARN for GitHub Actions OIDC trust
+        type: string
+        required: true
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: npm
+
+      - name: Setup SAM CLI
+        uses: aws-actions/setup-sam@v2
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.aws-deploy-role-arn }}
+          aws-region: ${{ inputs.aws-region }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: SAM validate
+        run: sam validate --config-env ${{ inputs.config-env }}
+
+      - name: SAM build
+        run: sam build --config-env ${{ inputs.config-env }}
+
+      - name: SAM deploy
+        run: sam deploy --config-env ${{ inputs.config-env }} --no-confirm-changeset --no-fail-on-empty-changeset
+
+      - name: Output stack information
+        run: |
+          echo "Stack deployed: ${{ inputs.stack-name }}"
+          sam list stack-outputs --stack-name ${{ inputs.stack-name }} --output json || true
