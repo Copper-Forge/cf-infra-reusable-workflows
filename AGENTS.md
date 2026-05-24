@@ -14,7 +14,8 @@
 
 ### Never Reference Organization-Specific Values
 - Do not hardcode Copper-Forge org-specific account IDs, role names, or resource names in code examples
-- Do not reference org variables or secrets by name in workflow documentation
+- Avoid introducing new org variables or secrets by name in workflow documentation
+- If the current workflow implementation already depends on a named secret, document it only where required for correctness
 - This workflow must be generic enough to be forked, adapted, or reused in other organizations
 - Keep all org-specific configuration in consuming repositories (not this reusable workflow repo)
 
@@ -29,20 +30,20 @@ This file defines mandatory guidance for agents and contributors working in this
 
 ## Repository Purpose
 
-This repository defines a parameterized, reusable GitHub Actions workflow for Terraform baseline stacks (security, networking, and future infra repos). The workflow extracts common Terraform execution into a single DRY implementation that all consuming repositories call.
+This repository defines a parameterized, reusable GitHub Actions workflow for Terraform baseline stacks. The workflow extracts the shared Terraform execution path into a single implementation that consuming repositories call with `workflow_call`.
 
-The workflow encapsulates OIDC authentication, Terraform initialization, planning, and applying while leaving organization-specific account targeting in the consuming repositories.
+The current workflow file is `.github/workflows/terraform-baseline.yml`. It performs OIDC-based AWS authentication, validates the selected tfvars file, installs Terraform, and runs `terraform plan` or `terraform apply` based on the caller input.
+
+The workflow keeps environment naming generic through `state-key-prefix` and `environment-slug`. Organization-specific account targeting stays in the consuming repositories.
 
 ## Workspace Companion Loading
 
-Open this repository in a multi-root workspace with:
+If these companion repositories are open in the same workspace, you can use workspace-relative references in docs and plans:
 
 - ../cf-infra-security
 - ../cf-infra-networking
 - ../cf-infra-terraform-modules
 - ../github-agents-source-of-truth
-
-Use workspace-relative references in all docs and plans.
 
 ## Reusable Workflow Contract
 
@@ -61,7 +62,6 @@ These inputs control the workflow behavior. All inputs are passed via the `with:
 | Input | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `working-directory` | string | no | `.` | Working directory for Terraform commands. Set to `.` for flat root layout; set to a subdirectory for other layouts (e.g., `stacks/security`). |
-| `aws-role-to-assume` | string | **yes** | — | AWS role ARN to assume via OIDC before running Terraform. This role should provide backend access and any base credentials Terraform needs. |
 | `aws-region` | string | no | `us-west-2` | AWS region used for credential configuration and backend access. |
 | `state-key-prefix` | string | **yes** | — | Prefix for the Terraform state key (e.g., `security`, `networking`). Used to construct `<prefix>/<slug>/terraform.tfstate`. |
 | `tfvars-file` | string | **yes** | — | Path to the `.tfvars` file for the selected environment (for example `tfvars/dev.tfvars`). |
@@ -69,12 +69,16 @@ These inputs control the workflow behavior. All inputs are passed via the `with:
 | `action` | string | no | `plan` | Terraform action to perform. Options: `plan`, `apply`. Required because reusable workflows cannot directly read the caller's `workflow_dispatch` inputs. |
 | `environment-slug` | string | **yes** | — | Environment identifier used to build the Terraform state key and label the run. |
 
+### Workflow Secrets
+
+The workflow currently reads the AWS role ARN from `secrets.SHARED_SERVICES_OIDC_ARN`.
+
 ### Workflow Behavior
 
 The workflow executes this sequence:
 
 1. **Log the selected environment** — Uses the caller-provided environment slug for traceability.
-2. **Configure AWS credentials** — Uses OIDC to assume the caller-provided role; no long-lived credentials.
+2. **Configure AWS credentials** — Uses OIDC and `secrets.SHARED_SERVICES_OIDC_ARN`; no long-lived credentials.
 3. **Checkout** — Clones the repository.
 4. **Validate tfvars input** — Fails early if the specified tfvars file is missing.
 5. **Setup Terraform** — Installs the specified Terraform version.
@@ -96,6 +100,7 @@ The workflow requests:
 The workflow includes explicit error checks:
 
 - **Missing tfvars file** — Exits with descriptive message before Terraform runs.
+- **Missing or invalid OIDC secret** — The AWS credentials step fails before Terraform runs.
 - **Terraform errors** — Propagated to GitHub Actions run logs.
 
 ## Caller Workflow Pattern
@@ -126,15 +131,15 @@ on:
 jobs:
   baseline:
     uses: Copper-Forge/cf-infra-reusable-workflows/.github/workflows/terraform-baseline.yml@main
+    secrets: inherit
     with:
       working-directory: '.'
-      aws-role-to-assume: ${{ vars.TERRAFORM_RUNNER_ROLE_ARN }}
-      aws-region: 'us-west-2'
       state-key-prefix: 'security'
-      tfvars-file: 'tfvars/${{ github.event.inputs.target }}.tfvars'
+      tfvars-file: 'tfvars/dev.tfvars'
+      environment-slug: 'dev'
+      aws-region: 'us-west-2'
       tf_version: '1.15.4'
-      action: ${{ github.event.inputs.action || 'plan' }}
-      environment-slug: ${{ github.event.inputs.target }}
+      action: plan
 ```
 
 ### Caller Workflow Triggers
@@ -146,7 +151,7 @@ Caller workflows define the triggering model that fits their repository. The reu
 > **No AWS account IDs, organization-specific role names, or organization-specific variable names in this public workflow repository.**
 >
 - Account targeting belongs in consuming repositories.
-- Role ARNs are passed in as generic workflow inputs by consuming repositories.
+- Role ARNs are supplied through the caller's secret context.
 - State key paths are constructed dynamically from the `state-key-prefix` and environment slug.
 - When adding a new account, update the consuming repository configuration and tfvars — do not modify this workflow.
 
@@ -183,11 +188,16 @@ At current org scale (few consuming repos), version tags are not needed. If the 
 When adding a new account to the CopperForge infrastructure:
 
 1. Update the consuming repository's tfvars and target-selection configuration.
-2. Ensure the consuming repository passes the correct runner role ARN for backend access.
+2. Ensure the consuming repository passes the correct OIDC secret for backend access.
 3. Do not modify this workflow file — all account-specific configuration belongs in consumer repos.
 
 ## Related Documents
 
+- README.md
+- docs/ARCHITECTURE.md
+- docs/CODEBASE_CONTEXT.md
+- docs/LOCAL_DEVELOPMENT.md
+- docs/TROUBLESHOOTING.md
 - ../cf-infra-security/AGENTS.md
 - ../cf-infra-networking/AGENTS.md
 - ../cf-infra-terraform-modules/AGENTS.md
