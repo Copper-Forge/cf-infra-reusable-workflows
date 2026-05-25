@@ -81,16 +81,27 @@ jobs:
             local label="$1"
             local s3_uri="$2"
             local local_path="$3"
+            local aws_error_log
 
-            if ! aws s3 cp "${s3_uri}" "${local_path}" --only-show-errors; then
-              if [ "${label}" = "shared" ]; then
-                echo "Missing shared tfvars object: ${s3_uri}"
+            aws_error_log="$(mktemp "${RUNNER_TEMP}/terraform-baseline-${label}-aws-error.XXXXXX")"
+
+            if ! aws s3 cp "${s3_uri}" "${local_path}" --only-show-errors 2>"${aws_error_log}"; then
+              if grep -Eq '(\(404\)|NoSuchKey|Not Found|does not exist)' "${aws_error_log}"; then
+                if [ "${label}" = "shared" ]; then
+                  echo "Missing shared tfvars object: ${s3_uri}"
+                else
+                  echo "Missing stack tfvars object: ${s3_uri}"
+                fi
+                echo "Ensure the tfvars object exists in S3 before rerunning."
               else
-                echo "Missing stack tfvars object: ${s3_uri}"
+                echo "Failed to download ${label} tfvars object: ${s3_uri}" >&2
+                cat "${aws_error_log}" >&2
               fi
-              echo "Ensure the tfvars object exists in S3 before rerunning."
+              rm -f "${aws_error_log}"
               exit 1
             fi
+
+            rm -f "${aws_error_log}"
 
             if [ ! -s "${local_path}" ]; then
               echo "Downloaded ${label} tfvars file is missing or empty: ${local_path}"

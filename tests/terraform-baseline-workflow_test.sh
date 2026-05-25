@@ -55,6 +55,8 @@ assert_contains "Shared tfvars local path:"
 assert_contains "Stack tfvars local path:"
 assert_contains "Missing shared tfvars object:"
 assert_contains "Missing stack tfvars object:"
+assert_contains 'grep -Eq '\''(\(404\)|NoSuchKey|Not Found|does not exist)'\'' "${aws_error_log}"'
+assert_contains 'Failed to download ${label} tfvars object: ${s3_uri}'
 assert_contains "Ensure the tfvars object exists in S3 before rerunning."
 assert_contains 'terraform init -backend-config="key=${{ inputs.state-key-prefix }}/${{ inputs.environment-slug }}/terraform.tfstate"'
 assert_var_file_order "terraform plan" '-var-file="${TF_SHARED_TFVARS_PATH}"' '-var-file="${TF_STACK_TFVARS_PATH}"'

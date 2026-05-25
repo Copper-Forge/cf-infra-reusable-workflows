@@ -34,7 +34,7 @@ This repository defines parameterized, reusable GitHub Actions workflows for Cop
 
 The current workflow files are:
 
-- `.github/workflows/terraform-baseline.yml` — Performs OIDC-based AWS authentication, validates the selected tfvars file, installs Terraform, and runs `terraform plan` or `terraform apply` based on caller input.
+- `.github/workflows/terraform-baseline.yml` — Performs OIDC-based AWS authentication, downloads shared and stack tfvars from S3, validates the downloaded files, installs Terraform, and runs `terraform plan` or `terraform apply` based on caller input.
 - `.github/workflows/sam-template-nodejs.yml` — Sets up Node.js and AWS SAM CLI, configures OIDC AWS authentication from caller variables, runs Node dependency installation/build, then runs SAM validate/build/deploy commands.
 - `.github/workflows/sam-template-python.yml` — Sets up Python, `uv`, and AWS SAM CLI, configures OIDC AWS authentication from caller variables, runs Python dependency sync, then runs SAM validate/build/deploy commands.
 
@@ -70,7 +70,8 @@ These inputs control the workflow behavior. All inputs are passed via the `with:
 | `working-directory` | string | no | `.` | Working directory for Terraform commands. Set to `.` for flat root layout; set to a subdirectory for other layouts (e.g., `stacks/security`). |
 | `aws-region` | string | no | `us-west-2` | AWS region used for credential configuration and backend access. |
 | `state-key-prefix` | string | **yes** | — | Prefix for the Terraform state key (e.g., `security`, `networking`). Used to construct `<prefix>/<slug>/terraform.tfstate`. |
-| `tfvars-file` | string | **yes** | — | Path to the `.tfvars` file for the selected environment (for example `tfvars/dev.tfvars`). |
+| `stack-repository` | string | **yes** | — | Repository path segment used to construct the stack tfvars S3 key. |
+| `stack-name` | string | **yes** | — | Stack path segment used to construct the stack tfvars S3 key. |
 | `tf_version` | string | no | `1.15.4` | Terraform version to install. Use semantic version strings (e.g., `1.15.4`, `1.16.0`). |
 | `action` | string | no | `plan` | Terraform action to perform. Options: `plan`, `apply`. Required because reusable workflows cannot directly read the caller's `workflow_dispatch` inputs. |
 | `environment-slug` | string | **yes** | — | Environment identifier used to build the Terraform state key and label the run. |
@@ -86,11 +87,12 @@ The Terraform workflow executes this sequence:
 1. **Log the selected environment** — Uses the caller-provided environment slug for traceability.
 2. **Configure AWS credentials** — Uses OIDC and `secrets.SHARED_SERVICES_OIDC_ARN`; no long-lived credentials.
 3. **Checkout** — Clones the repository.
-4. **Validate tfvars input** — Fails early if the specified tfvars file is missing.
-5. **Setup Terraform** — Installs the specified Terraform version.
-6. **Terraform Init** — Runs `terraform init -backend-config="key=<state-key-prefix>/<environment-slug>/terraform.tfstate"`.
-7. **Terraform Plan** — Runs `terraform plan -var-file="<tfvars-file>"` when `action: plan`.
-8. **Terraform Apply** — Runs `terraform apply -auto-approve -var-file="<tfvars-file>"` when `action: apply`.
+4. **Download tfvars from S3** — Resolves `s3://copperforge-terraform-inputs/<environment-slug>/terraform.tfvars` plus `s3://copperforge-terraform-inputs/<environment-slug>/<stack-repository>/<stack-name>/terraform.tfvars`, downloads both into runner temp storage, and logs the resolved URIs and local paths.
+5. **Validate downloaded tfvars** — Fails early if either downloaded file is missing or empty.
+6. **Setup Terraform** — Installs the specified Terraform version.
+7. **Terraform Init** — Runs `terraform init -backend-config="key=<state-key-prefix>/<environment-slug>/terraform.tfstate"`.
+8. **Terraform Plan** — Runs `terraform plan -var-file="<shared-tfvars>" -var-file="<stack-tfvars>"` when `action: plan`.
+9. **Terraform Apply** — Runs `terraform apply -auto-approve -var-file="<shared-tfvars>" -var-file="<stack-tfvars>"` when `action: apply`.
 
 The reusable workflow does not resolve target account IDs. Consuming repositories own target selection and may let Terraform assume into the target account from values defined in their tfvars files.
 
@@ -157,7 +159,8 @@ Each workflow requests:
 
 The workflows include these explicit or surfaced error paths:
 
-- **Missing tfvars file** — Exits with descriptive message before Terraform runs.
+- **Missing shared or stack tfvars object** — Exits with the missing S3 URI before Terraform runs.
+- **Other S3 download failures** — Surfaces the AWS CLI error before Terraform runs.
 - **Missing or invalid OIDC secret** — The AWS credentials step fails before Terraform runs.
 - **Missing or invalid SAM caller variables** — The SAM credentials step fails before SAM commands run.
 - **Missing Node.js or Python dependency metadata** — Runtime dependency installation fails in the caller repository.
