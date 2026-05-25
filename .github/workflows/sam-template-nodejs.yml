@@ -14,16 +14,31 @@ on:
       aws-region:
         description: AWS region for credentials and SAM deployment
         type: string
-        default: 'us-east-1'
+        default: 'us-west-2'
         required: false
       environment-slug:
-        description: Environment identifier (e.g., 'dinkapade-dev') for OIDC role lookup
+        description: Environment identifier for OIDC role lookup
         type: string
         required: true
       node-version:
         description: Node.js version for build
         type: string
         default: '24'
+        required: false
+      sam-directory:
+        description: Directory containing samconfig and template files (e.g., 'infra/sam')
+        type: string
+        default: '.'
+        required: false
+      config-file:
+        description: Path to samconfig.toml (e.g., 'infra/sam/samconfig.toml')
+        type: string
+        default: 'samconfig.toml'
+        required: false
+      template-file:
+        description: Path to SAM template file (e.g., 'infra/sam/template-node.yaml')
+        type: string
+        default: 'template.yaml'
         required: false
 
 permissions:
@@ -61,15 +76,30 @@ jobs:
         run: npm run build
 
       - name: SAM validate
-        run: sam validate --config-env ${{ inputs.config-env }}
+        working-directory: ${{ inputs.sam-directory }}
+        run: sam validate \
+            --config-env ${{ inputs.config-env }} \
+            --config-file ${{ inputs.config-file }} \
+            --template-file ${{ inputs.template-file }}
 
       - name: SAM build
-        run: sam build --config-env ${{ inputs.config-env }}
+        working-directory: ${{ inputs.sam-directory }}
+        run: sam build \
+            --config-env ${{ inputs.config-env }} \
+            --config-file ${{ inputs.config-file }} \
+            --template-file ${{ inputs.template-file }}
 
       - name: SAM deploy
-        run: sam deploy --config-env ${{ inputs.config-env }} --no-confirm-changeset --no-fail-on-empty-changeset
+        working-directory: ${{ inputs.sam-directory }}
+        run: sam deploy \
+            --config-env ${{ inputs.config-env }} \
+            --config-file ${{ inputs.config-file }} \
+            --template-file ${{ inputs.template-file }} \
+            --no-confirm-changeset \
+            --no-fail-on-empty-changeset
 
       - name: Output stack information
+        working-directory: ${{ inputs.sam-directory }}
         run: |
           echo "Stack deployed: ${{ inputs.stack-name }}"
           sam list stack-outputs --stack-name ${{ inputs.stack-name }} --output json || true
