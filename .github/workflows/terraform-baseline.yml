@@ -55,7 +55,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Validate tfvars file
-        working-directory: ${{ inputs.working-directory }}
+        working-directory: "${{ inputs.working-directory }}/"
         run: |
           if [ ! -f "${{ inputs.tfvars-file }}" ]; then
             echo "tfvars file not found: ${{ inputs.tfvars-file }}"
@@ -66,13 +66,13 @@ jobs:
         with:
           terraform_version: ${{ inputs.tf_version }}
       - name: Terraform Init
-        working-directory: ${{ inputs.working-directory }}
+        working-directory: "${{ inputs.working-directory }}/"
         run: terraform init -backend-config="key=${{ inputs.state-key-prefix }}/${{ inputs.environment-slug }}/terraform.tfstate"
       - name: Terraform Plan
         if: inputs.action == 'plan'
-        working-directory: ${{ inputs.working-directory }}
+        working-directory: "${{ inputs.working-directory }}/"
         run: terraform plan -var-file="${{ inputs.tfvars-file }}"
       - name: Terraform Apply
         if: inputs.action == 'apply'
-        working-directory: ${{ inputs.working-directory }}
+        working-directory: "${{ inputs.working-directory }}/"
         run: terraform apply -auto-approve -var-file="${{ inputs.tfvars-file }}"
