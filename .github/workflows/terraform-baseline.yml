@@ -3,10 +3,6 @@ name: Terraform Baseline Workflow
 on:
   workflow_call:
     inputs:
-      state-key-prefix:
-        description: Prefix for Terraform state key (e.g., 'security', 'networking')
-        type: string
-        required: true
       tfvars-file:
         description: Path to the tfvars file for the selected environment
         type: string
@@ -20,6 +16,11 @@ on:
         type: string
         default: '.'
         required: false
+      action:
+        description: Terraform action to perform
+        type: string
+        default: 'plan'
+        required: false
       aws-region:
         description: AWS region for credentials and Terraform backend access
         type: string
@@ -29,11 +30,6 @@ on:
         description: Terraform version to use
         type: string
         default: '1.15.4'
-        required: false
-      action:
-        description: Terraform action to perform
-        type: string
-        default: 'plan'
         required: false
       
 permissions:
@@ -67,7 +63,7 @@ jobs:
           terraform_version: ${{ inputs.tf_version }}
       - name: Terraform Init
         working-directory: "${{ inputs.working-directory }}/"
-        run: terraform init -backend-config="key=${{ inputs.state-key-prefix }}/${{ inputs.account-nickname }}/terraform.tfstate"
+        run: terraform init -backend-config="key=${{ inputs.account-nickname }}/${{ inputs.working-directory }}/terraform.tfstate"
       - name: Terraform Plan
         if: inputs.action == 'plan'
         working-directory: "${{ inputs.working-directory }}/"
