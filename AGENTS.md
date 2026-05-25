@@ -67,7 +67,7 @@ These inputs control the workflow behavior. All inputs are passed via the `with:
 
 | Input | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `working-directory` | string | no | `.` | Working directory for Terraform commands. Set to `.` for flat root layout; set to a subdirectory for other layouts (e.g., `stacks/security`). |
+| `working-directory` | string | no | `.` | Working directory for Terraform commands. Set to `.` for flat-root callers or to a stack subdirectory such as `security/`, `networking/`, or `tf-app-artifact-store/`. |
 | `aws-region` | string | no | `us-west-2` | AWS region used for credential configuration and backend access. |
 | `state-key-prefix` | string | **yes** | — | Prefix for the Terraform state key (e.g., `security`, `networking`). Used to construct `<prefix>/<slug>/terraform.tfstate`. |
 | `stack-repository` | string | **yes** | — | Repository path segment used to construct the stack tfvars S3 key. |
@@ -93,6 +93,11 @@ The Terraform workflow executes this sequence:
 7. **Terraform Init** — Runs `terraform init -backend-config="key=<state-key-prefix>/<environment-slug>/terraform.tfstate"`.
 8. **Terraform Plan** — Runs `terraform plan -var-file="<shared-tfvars>" -var-file="<stack-tfvars>"` when `action: plan`.
 9. **Terraform Apply** — Runs `terraform apply -auto-approve -var-file="<shared-tfvars>" -var-file="<stack-tfvars>"` when `action: apply`.
+
+The var-file order is part of the contract: shared tfvars are applied first,
+stack tfvars are applied second, and stack-local values override shared values on
+duplicate keys. Moving a caller's Terraform root into a subdirectory must not
+change the existing `state-key-prefix` or create a new backend namespace.
 
 The reusable workflow does not resolve target account IDs. Consuming repositories own target selection and may let Terraform assume into the target account from values defined in their tfvars files.
 
@@ -166,6 +171,9 @@ The workflows include these explicit or surfaced error paths:
 - **Missing Node.js or Python dependency metadata** — Runtime dependency installation fails in the caller repository.
 - **Terraform errors** — Propagated to GitHub Actions run logs.
 - **SAM CLI errors** — Propagated to GitHub Actions run logs.
+- **Pre-cleanup rollback window closes in Feature 07** — Before cleanup, operators can
+  re-upload prior local tfvars sources; after cleanup, do not assume tracked placeholder
+  files still exist in consuming repositories.
 
 ## Caller Workflow Pattern
 

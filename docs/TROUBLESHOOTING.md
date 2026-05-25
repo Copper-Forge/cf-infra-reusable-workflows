@@ -16,11 +16,23 @@
 
 ## Terraform Workflow
 
-### `tfvars file not found: ...`
+### `Missing shared tfvars object: ...`
 
-- **Symptom**: The run fails before Terraform starts and prints `tfvars file not found: <path>`.
-- **Cause**: The `tfvars-file` path is wrong, or the path is relative to the wrong `working-directory`.
-- **Fix**: Update the caller workflow inputs so the file exists from the selected working directory.
+- **Symptom**: The run fails before Terraform setup and prints the shared S3 URI.
+- **Cause**: The shared tfvars source was not uploaded to
+  `s3://copperforge-terraform-inputs/<environment-slug>/terraform.tfvars`, or
+  the role cannot read it.
+- **Fix**: Re-run the shared-services upload script in dry-run mode, upload the
+  corrected file, verify the S3 object exists, and rerun the workflow.
+
+### `Missing stack tfvars object: ...`
+
+- **Symptom**: The run fails before Terraform setup and prints the stack S3 URI.
+- **Cause**: The consuming repository did not upload
+  `s3://copperforge-terraform-inputs/<environment-slug>/<stack-repository>/<stack-name>/terraform.tfvars`,
+  or the caller passed the wrong `stack-repository` or `stack-name`.
+- **Fix**: Re-run the stack upload script, verify the caller workflow inputs, and
+  confirm the object exists in S3 before retrying.
 
 ### `Configure AWS credentials` fails in Terraform workflow
 
@@ -31,8 +43,8 @@
 ### `terraform init` backend errors
 
 - **Symptom**: `terraform init` fails after credential configuration and checkout.
-- **Cause**: The backend key inputs do not match the intended environment, or the AWS role cannot access the backend.
-- **Fix**: Verify `state-key-prefix`, `environment-slug`, backend configuration, and permissions attached to the assumed role.
+- **Cause**: The backend key inputs do not match the intended environment, the caller changed the state namespace during a directory move, or the AWS role cannot access the backend.
+- **Fix**: Preserve the existing `state-key-prefix`, verify `environment-slug`, and confirm permissions attached to the assumed role.
 
 ### `Terraform Apply` never runs
 
@@ -89,5 +101,5 @@
 ### Unexpected environment or target account
 
 - **Symptom**: Logs show the wrong environment slug, state path, or assumed account.
-- **Cause**: The caller supplied the wrong `environment-slug`, `state-key-prefix`, or account mapping.
+- **Cause**: The caller supplied the wrong `environment-slug`, `state-key-prefix`, `stack-repository`, `stack-name`, or account mapping.
 - **Fix**: Correct the caller workflow inputs or variables and rerun.

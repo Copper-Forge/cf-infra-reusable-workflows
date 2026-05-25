@@ -9,9 +9,10 @@ flowchart LR
   Caller --> SamPython[sam-template-python.yml]
 
   Terraform --> TfAuth[AWS OIDC credentials]
-  Terraform --> TfValidate[tfvars validation]
+  Terraform --> TfDownload[shared and stack tfvars download]
   Terraform --> TfRun[Terraform init plan apply]
   TfAuth --> Aws[AWS]
+  TfDownload --> Aws
   TfRun --> TfBackend[Terraform backend]
 
   SamNode --> NodeSetup[Node.js setup and npm build]
@@ -33,7 +34,9 @@ flowchart LR
   - Reusable Terraform workflow invoked through `workflow_call`.
   - Runs on `ubuntu-latest`.
   - Uses OIDC AWS authentication with `secrets.SHARED_SERVICES_OIDC_ARN`.
-  - Checks out the caller repository, validates the selected tfvars file, installs Terraform, runs `terraform init`, then runs either `terraform plan` or `terraform apply`.
+  - Checks out the caller repository, downloads shared and stack tfvars from S3,
+    installs Terraform, runs `terraform init`, then runs either `terraform plan`
+    or `terraform apply` with the shared file first and the stack file second.
 - `.github/workflows/sam-template-nodejs.yml`
   - Reusable AWS SAM workflow for Node.js applications.
   - Installs the requested Node.js version, sets up the SAM CLI, configures AWS credentials, runs `npm ci`, runs `npm run build`, validates the SAM template, builds the SAM application, deploys it, and prints stack outputs.
@@ -52,6 +55,9 @@ flowchart LR
 - Keep application code, Terraform code, SAM templates, and environment-specific configuration in consuming repositories.
 - Use OIDC instead of long-lived static AWS credentials.
 - Keep Terraform state key construction predictable with `state-key-prefix` plus `environment-slug`.
+- Keep stack-specific S3 tfvars lookup predictable with `stack-repository` plus `stack-name`.
+- Preserve backend namespaces during caller directory moves; changing `working-directory`
+  must not create a new state path.
 - Let SAM workflows derive AWS role ARNs from caller-provided variables instead of storing static role ARNs in this repository.
 - Keep runtime-specific SAM workflows separate because Node.js and Python dependency setup differ.
 

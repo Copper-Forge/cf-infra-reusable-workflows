@@ -56,6 +56,37 @@ jobs:
       action: plan
 ```
 
+## Terraform Baseline Behavior
+
+The Terraform reusable workflow expects callers to provide:
+
+- `state-key-prefix` for the backend state key namespace
+- `stack-repository` for the stack tfvars S3 path
+- `stack-name` for the stack tfvars S3 path
+- `environment-slug` for both S3 lookup and backend state key construction
+
+The workflow downloads shared tfvars from the shared object key before it downloads
+stack tfvars from the stack object key.
+
+At runtime the workflow:
+
+1. Downloads shared tfvars from
+   `s3://copperforge-terraform-inputs/<environment-slug>/terraform.tfvars`.
+2. Downloads stack tfvars from
+   `s3://copperforge-terraform-inputs/<environment-slug>/<stack-repository>/<stack-name>/terraform.tfvars`.
+3. Runs Terraform with `-var-file="<shared>" -var-file="<stack>"`, so the shared
+   tfvars file is applied first and stack-local values override shared values.
+
+Changing `working-directory` must not create a new backend namespace. Preserve the
+existing `state-key-prefix` for a stack even when its Terraform root moves into a
+subdirectory such as `networking/` or `security/`.
+
+If either tfvars object is missing, the workflow fails before Terraform starts and
+prints the missing S3 URI. Operators should dry-run the upload scripts in the source
+repositories, upload the corrected file, verify the S3 object exists, and rerun the
+plan. Pre-cleanup rollback is only available before Feature 07 removes tracked
+placeholder tfvars files from consuming repositories.
+
 Node.js SAM caller job:
 
 ```yaml

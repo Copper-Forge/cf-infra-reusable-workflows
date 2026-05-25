@@ -26,10 +26,11 @@
 ## Workflow-Specific Checks
 
 - Terraform baseline:
-  - Required inputs are `state-key-prefix`, `tfvars-file`, and `environment-slug`.
+  - Required inputs are `state-key-prefix`, `stack-repository`, `stack-name`, and `environment-slug`.
   - Optional inputs are `working-directory`, `aws-region`, `tf_version`, and `action`.
   - Caller secret requirement is `SHARED_SERVICES_OIDC_ARN`.
-  - The tfvars validation step should run before Terraform setup and commands.
+  - The workflow should download shared tfvars first, stack tfvars second, then run Terraform with the shared file before the stack file.
+  - Changing `working-directory` must not require a new `state-key-prefix`.
 - SAM Node.js:
   - Required inputs are `config-env`, `stack-name`, and `environment-slug`.
   - Optional inputs are `aws-region`, `node-version`, `sam-directory`, `config-file`, and `template-file`.
@@ -55,7 +56,11 @@
 - GitHub Actions reaches Terraform or SAM command steps:
   - The caller successfully invoked the reusable workflow and provided enough context for setup.
 - Terraform fails at `Validate tfvars file`:
-  - The `tfvars-file` path or `working-directory` input is wrong for the caller repository layout.
+  - The docs are stale. The current workflow downloads tfvars from S3 before Terraform setup.
+- Terraform fails at `Download tfvars from S3`:
+  - The shared or stack S3 object is missing, the caller supplied the wrong `stack-repository` or `stack-name`, or the assumed role lacks `s3:GetObject`.
+- Terraform fails after downloading tfvars:
+  - Review the logged S3 URIs, verify the caller preserved the existing `state-key-prefix`, and confirm the caller repository uploaded the expected shared and stack files.
 - SAM fails before `SAM validate`:
   - Runtime dependencies, caller variables, or AWS credential configuration need review.
 - SAM fails during validate, build, or deploy:

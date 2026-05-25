@@ -63,7 +63,8 @@
 
 - Inputs:
   - `state-key-prefix` - required; used in backend state key.
-  - `tfvars-file` - required; validated before Terraform runs.
+  - `stack-repository` - required; used to build the stack tfvars S3 key.
+  - `stack-name` - required; used to build the stack tfvars S3 key.
   - `environment-slug` - required; used in logs and backend key.
   - `working-directory` - optional; default `.`.
   - `aws-region` - optional; default `us-west-2`.
@@ -75,11 +76,13 @@
   - Log environment slug.
   - Configure AWS credentials with OIDC.
   - Check out caller repository.
-  - Validate `tfvars-file` inside `working-directory`.
+  - Download shared tfvars from `s3://copperforge-terraform-inputs/<environment-slug>/terraform.tfvars`.
+  - Download stack tfvars from `s3://copperforge-terraform-inputs/<environment-slug>/<stack-repository>/<stack-name>/terraform.tfvars`.
   - Install Terraform.
   - Run `terraform init -backend-config="key=<state-key-prefix>/<environment-slug>/terraform.tfstate"`.
-  - Run `terraform plan -var-file="<tfvars-file>"` when `action == plan`.
-  - Run `terraform apply -auto-approve -var-file="<tfvars-file>"` when `action == apply`.
+  - Run `terraform plan -var-file="<shared-tfvars>" -var-file="<stack-tfvars>"` when `action == plan`.
+  - Run `terraform apply -auto-approve -var-file="<shared-tfvars>" -var-file="<stack-tfvars>"` when `action == apply`.
+  - Treat the var-file order as a contract: shared first, stack second, stack values win.
 
 ## SAM Node.js Workflow Contract
 
@@ -153,6 +156,6 @@
 - Do not add application source, Terraform source, SAM templates, or dependency manifests to this repo unless the repository purpose changes.
 - Do not assume any workflow runs standalone from this repository.
 - Do not remove OIDC authentication from shared workflows.
-- Do not remove the Terraform tfvars existence check.
+- Do not remove the shared and stack tfvars download-and-validation checks.
 - Do not add direct triggers such as `push`, `pull_request`, or `workflow_dispatch` to reusable workflows without revisiting the caller contract.
 - Do not document behavior that only exists in consuming repositories as if it lives here.
