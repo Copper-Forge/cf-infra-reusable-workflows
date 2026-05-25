@@ -30,11 +30,15 @@ This file defines mandatory guidance for agents and contributors working in this
 
 ## Repository Purpose
 
-This repository defines a parameterized, reusable GitHub Actions workflow for Terraform baseline stacks. The workflow extracts the shared Terraform execution path into a single implementation that consuming repositories call with `workflow_call`.
+This repository defines parameterized, reusable GitHub Actions workflows for CopperForge infrastructure repositories. The workflows extract shared Terraform and AWS SAM execution paths into reusable implementations that consuming repositories call with `workflow_call`.
 
-The current workflow file is `.github/workflows/terraform-baseline.yml`. It performs OIDC-based AWS authentication, validates the selected tfvars file, installs Terraform, and runs `terraform plan` or `terraform apply` based on the caller input.
+The current workflow files are:
 
-The workflow keeps environment naming generic through `state-key-prefix` and `environment-slug`. Organization-specific account targeting stays in the consuming repositories.
+- `.github/workflows/terraform-baseline.yml` — Performs OIDC-based AWS authentication, validates the selected tfvars file, installs Terraform, and runs `terraform plan` or `terraform apply` based on caller input.
+- `.github/workflows/sam-template-nodejs.yml` — Sets up Node.js and AWS SAM CLI, configures OIDC AWS authentication from caller variables, runs Node dependency installation/build, then runs SAM validate/build/deploy commands.
+- `.github/workflows/sam-template-python.yml` — Sets up Python, `uv`, and AWS SAM CLI, configures OIDC AWS authentication from caller variables, runs Python dependency sync, then runs SAM validate/build/deploy commands.
+
+The workflows keep environment naming generic through inputs such as `environment-slug`, `state-key-prefix`, `sam-directory`, and SAM config/template paths. Account-specific values stay in consuming repository secrets or variables.
 
 ## Workspace Companion Loading
 
@@ -49,13 +53,15 @@ If these companion repositories are open in the same workspace, you can use work
 
 ### File Location
 
-`.github/workflows/terraform-baseline.yml`
+- `.github/workflows/terraform-baseline.yml`
+- `.github/workflows/sam-template-nodejs.yml`
+- `.github/workflows/sam-template-python.yml`
 
 ### Trigger Type
 
-`workflow_call` — this workflow is invoked by caller workflows in consuming repositories, not triggered directly.
+`workflow_call` — these workflows are invoked by caller workflows in consuming repositories, not triggered directly.
 
-### Workflow Inputs
+### Terraform Workflow Inputs
 
 These inputs control the workflow behavior. All inputs are passed via the `with:` block in the caller workflow.
 
@@ -69,13 +75,13 @@ These inputs control the workflow behavior. All inputs are passed via the `with:
 | `action` | string | no | `plan` | Terraform action to perform. Options: `plan`, `apply`. Required because reusable workflows cannot directly read the caller's `workflow_dispatch` inputs. |
 | `environment-slug` | string | **yes** | — | Environment identifier used to build the Terraform state key and label the run. |
 
-### Workflow Secrets
+### Terraform Workflow Secrets
 
-The workflow currently reads the AWS role ARN from `secrets.SHARED_SERVICES_OIDC_ARN`.
+The Terraform workflow currently reads the AWS role ARN from `secrets.SHARED_SERVICES_OIDC_ARN`.
 
-### Workflow Behavior
+### Terraform Workflow Behavior
 
-The workflow executes this sequence:
+The Terraform workflow executes this sequence:
 
 1. **Log the selected environment** — Uses the caller-provided environment slug for traceability.
 2. **Configure AWS credentials** — Uses OIDC and `secrets.SHARED_SERVICES_OIDC_ARN`; no long-lived credentials.
@@ -88,24 +94,79 @@ The workflow executes this sequence:
 
 The reusable workflow does not resolve target account IDs. Consuming repositories own target selection and may let Terraform assume into the target account from values defined in their tfvars files.
 
+### SAM Workflow Inputs
+
+These inputs are shared by both SAM workflows unless noted.
+
+| Input | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `config-env` | string | **yes** | — | SAM config environment passed to SAM CLI. |
+| `stack-name` | string | **yes** | — | CloudFormation stack name used when listing stack outputs. |
+| `environment-slug` | string | **yes** | — | Environment identifier used to look up the target account from caller variables. |
+| `aws-region` | string | no | `us-west-2` | AWS region used for credential configuration and SAM commands. |
+| `sam-directory` | string | no | `.` | Working directory for SAM validate/build/deploy commands. |
+| `config-file` | string | no | `samconfig.toml` | SAM config file path passed to SAM CLI. |
+| `template-file` | string | no | `template.yaml` | SAM template path passed to SAM CLI. |
+| `node-version` | string | no | `24` | Node.js version for `sam-template-nodejs.yml` only. |
+
+### SAM Workflow Variables
+
+The SAM workflows currently read caller variables:
+
+- `vars.BASELINE_ACCOUNT_MAPPINGS` — JSON mapping from `environment-slug` to account ID.
+- `vars.OIDC_ROLE_NAME` — Role name used to construct the OIDC role ARN.
+
+### SAM Node.js Workflow Behavior
+
+The Node.js SAM workflow executes this sequence:
+
+1. **Checkout** — Clones the caller repository.
+2. **Setup Node.js** — Uses `actions/setup-node@v4` with npm cache.
+3. **Setup SAM CLI** — Uses `aws-actions/setup-sam@v2`.
+4. **Configure AWS credentials** — Constructs the role ARN from caller variables and uses OIDC.
+5. **Install dependencies** — Runs `npm ci`.
+6. **Build** — Runs `npm run build`.
+7. **SAM validate** — Runs `sam validate` with caller-provided config and template inputs.
+8. **SAM build** — Runs `sam build` with the same config and template inputs.
+9. **SAM deploy** — Runs `sam deploy --no-confirm-changeset --no-fail-on-empty-changeset`.
+10. **Output stack information** — Runs `sam list stack-outputs --stack-name <stack-name> --output json || true`.
+
+### SAM Python Workflow Behavior
+
+The Python SAM workflow executes this sequence:
+
+1. **Checkout** — Clones the caller repository.
+2. **Setup Python** — Uses `actions/setup-python@v5` with Python `3.14`.
+3. **Setup SAM CLI** — Uses `aws-actions/setup-sam@v2`.
+4. **Configure AWS credentials** — Constructs the role ARN from caller variables and uses OIDC.
+5. **Install uv** — Uses `astral-sh/setup-uv@v3`.
+6. **Install dependencies** — Runs `uv sync`.
+7. **SAM validate** — Runs `sam validate` with caller-provided config and template inputs.
+8. **SAM build** — Runs `sam build` with the same config and template inputs.
+9. **SAM deploy** — Runs `sam deploy --no-confirm-changeset --no-fail-on-empty-changeset`.
+10. **Output stack information** — Runs `sam list stack-outputs --stack-name <stack-name> --output json`.
+
 ### Permissions
 
-The workflow requests:
+Each workflow requests:
 
 - `id-token: write` — Required for OIDC credential exchange.
 - `contents: read` — Required to checkout the repository.
 
 ### Error Handling
 
-The workflow includes explicit error checks:
+The workflows include these explicit or surfaced error paths:
 
 - **Missing tfvars file** — Exits with descriptive message before Terraform runs.
 - **Missing or invalid OIDC secret** — The AWS credentials step fails before Terraform runs.
+- **Missing or invalid SAM caller variables** — The SAM credentials step fails before SAM commands run.
+- **Missing Node.js or Python dependency metadata** — Runtime dependency installation fails in the caller repository.
 - **Terraform errors** — Propagated to GitHub Actions run logs.
+- **SAM CLI errors** — Propagated to GitHub Actions run logs.
 
 ## Caller Workflow Pattern
 
-Each consuming repository (cf-infra-security, cf-infra-networking, etc.) defines a caller workflow that triggers the reusable workflow.
+Each consuming repository (cf-infra-security, cf-infra-networking, application repositories, etc.) defines a caller workflow that triggers one of the reusable workflows.
 
 ### Example Caller Workflow
 
@@ -144,26 +205,27 @@ jobs:
 
 ### Caller Workflow Triggers
 
-Caller workflows define the triggering model that fits their repository. The reusable workflow does not assume branch naming, account-mapping variables, or a particular environment picker shape.
+Caller workflows define the triggering model that fits their repository. The reusable workflows do not assume branch naming or a particular environment picker shape.
 
 ## No-Hardcodes Convention
 
 > **No AWS account IDs, organization-specific role names, or organization-specific variable names in this public workflow repository.**
 >
 - Account targeting belongs in consuming repositories.
-- Role ARNs are supplied through the caller's secret context.
+- Terraform role ARNs are supplied through the caller's secret context.
+- SAM account mappings and OIDC role names are supplied through caller variables currently named `BASELINE_ACCOUNT_MAPPINGS` and `OIDC_ROLE_NAME`.
 - State key paths are constructed dynamically from the `state-key-prefix` and environment slug.
-- When adding a new account, update the consuming repository configuration and tfvars — do not modify this workflow.
+- When adding a new account, update the consuming repository configuration, tfvars, or caller variables — do not modify these workflows.
 
 This convention ensures that:
 
-1. The workflow is repo-agnostic (works for security, networking, and any future stack).
+1. The workflows are repo-agnostic across infrastructure and application repositories.
 2. Account additions do not require workflow changes.
 3. All organization-specific information stays in consumer configuration, not workflow logic.
 
 ## Module Sourcing Rule
 
-This repository contains workflow YAML only. It does not contain Terraform code or AWS resources.
+This repository contains reusable workflow YAML only. It does not contain Terraform code, SAM templates, application source, or AWS resources.
 
 If consuming repositories use custom Terraform modules, they must follow the module sourcing rule defined in cf-infra-security/AGENTS.md or cf-infra-networking/AGENTS.md.
 
@@ -171,7 +233,7 @@ If consuming repositories use custom Terraform modules, they must follow the mod
 
 - CI authentication must use OIDC short-lived credentials only (no long-lived static credentials).
 - Do not add secrets or credentials to this repository.
-- Consuming organizations must pass any required role ARN and region through reusable workflow inputs.
+- Consuming organizations must pass any required role ARN, account mapping, role name, and region through reusable workflow secrets, variables, or inputs.
 
 ## Workflow Pinning Strategy
 
@@ -181,15 +243,15 @@ Consuming repositories pin to `@main`:
 uses: Copper-Forge/cf-infra-reusable-workflows/.github/workflows/terraform-baseline.yml@main
 ```
 
-At current org scale (few consuming repos), version tags are not needed. If the number of consuming repos grows significantly, consider introducing semver tags (e.g., `@v1.0`, `@v1.1`) and a release process. For now, `@main` is acceptable because breaking changes are rare and all consuming repos are within the same organization.
+Use the same pattern for SAM workflows by replacing the workflow file name. At current org scale (few consuming repos), version tags are not needed. If the number of consuming repos grows significantly, consider introducing semver tags (e.g., `@v1.0`, `@v1.1`) and a release process. For now, `@main` is acceptable because breaking changes are rare and all consuming repos are within the same organization.
 
 ## Adding a New Account
 
 When adding a new account to the CopperForge infrastructure:
 
-1. Update the consuming repository's tfvars and target-selection configuration.
-2. Ensure the consuming repository passes the correct OIDC secret for backend access.
-3. Do not modify this workflow file — all account-specific configuration belongs in consumer repos.
+1. Update the consuming repository's tfvars, target-selection configuration, or caller variables.
+2. Ensure the consuming repository passes the correct OIDC secret or variables for the selected workflow.
+3. Do not modify these workflow files for account-specific configuration — that belongs in consumer repos.
 
 ## Related Documents
 

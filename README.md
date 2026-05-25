@@ -1,42 +1,44 @@
 # cf-infra-reusable-workflows
 
-Reusable GitHub Actions workflows for CopperForge Terraform baseline stacks.
+Reusable GitHub Actions workflows for CopperForge infrastructure repositories.
 
 ## Overview
 
-This repository currently contains one reusable workflow, `.github/workflows/terraform-baseline.yml`.
+This repository centralizes shared workflow logic for infrastructure repositories that need a consistent Terraform or AWS SAM execution path.
 
-It is invoked from consuming repositories through `workflow_call` and handles:
+It currently provides three reusable workflows:
 
-- OIDC-based AWS authentication
-- Terraform setup, init, plan, and apply
-- Early validation that the selected tfvars file exists
-- Terraform state key construction from `state-key-prefix` and `environment-slug`
+- `.github/workflows/terraform-baseline.yml` - Terraform init, plan, and apply for baseline stacks
+- `.github/workflows/sam-template-nodejs.yml` - Node.js SAM application validation, build, and deployment
+- `.github/workflows/sam-template-python.yml` - Python SAM application validation, build, and deployment
 
-The repository does not contain Terraform code or infrastructure resources.
+The repository contains workflow definitions and documentation only. It does not contain application source, Terraform modules, SAM templates, or AWS resources.
 
 ## Repository Structure
 
-- `.github/workflows/terraform-baseline.yml` - reusable Terraform workflow
+- `.github/workflows/` - reusable workflows invoked with `workflow_call`
 - `AGENTS.md` - repository-specific guidance for contributors and agents
 - `docs/` - architecture, local development, troubleshooting, and codebase context
 
 ## Prerequisites
 
 - Git
-- A GitHub repository that can call this reusable workflow
+- A GitHub repository that calls one of the reusable workflows
 - Optional: `actionlint` for local workflow validation
+- For Terraform callers: a caller secret named `SHARED_SERVICES_OIDC_ARN`
+- For SAM callers: caller variables named `BASELINE_ACCOUNT_MAPPINGS` and `OIDC_ROLE_NAME`
 
 ## Local Setup
 
 1. Clone this repository.
 2. Review `AGENTS.md` before editing.
-3. Edit `.github/workflows/terraform-baseline.yml` or the files in `docs/`.
-4. Run `actionlint .github/workflows/terraform-baseline.yml` if you have it installed.
+3. Edit workflow YAML under `.github/workflows/` or docs under `docs/`.
+4. Run `actionlint .github/workflows/*.yml` if you have it installed.
+5. Review the diff for secrets, account IDs, and organization-specific values before committing.
 
 ## Usage
 
-Example caller workflow:
+Terraform baseline caller job:
 
 ```yaml
 jobs:
@@ -53,7 +55,35 @@ jobs:
       action: plan
 ```
 
-The reusable workflow currently reads the AWS role ARN from `secrets.SHARED_SERVICES_OIDC_ARN`.
+Node.js SAM caller job:
+
+```yaml
+jobs:
+  app:
+    uses: Copper-Forge/cf-infra-reusable-workflows/.github/workflows/sam-template-nodejs.yml@main
+    with:
+      config-env: dev
+      stack-name: example-app-dev
+      environment-slug: dev
+      sam-directory: infra/sam
+      config-file: samconfig.toml
+      template-file: template.yaml
+```
+
+Python SAM caller job:
+
+```yaml
+jobs:
+  app:
+    uses: Copper-Forge/cf-infra-reusable-workflows/.github/workflows/sam-template-python.yml@main
+    with:
+      config-env: dev
+      stack-name: example-app-dev
+      environment-slug: dev
+      sam-directory: infra/sam
+      config-file: samconfig.toml
+      template-file: template.yaml
+```
 
 ## Related Docs
 
