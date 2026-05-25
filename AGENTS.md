@@ -196,7 +196,8 @@ jobs:
     with:
       working-directory: '.'
       state-key-prefix: 'security'
-      tfvars-file: 'tfvars/dev.tfvars'
+      stack-repository: 'cf-infra-security'
+      stack-name: 'security'
       environment-slug: 'dev'
       aws-region: 'us-west-2'
       tf_version: '1.15.4'
