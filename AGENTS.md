@@ -205,7 +205,7 @@ jobs:
     uses: Copper-Forge/cf-infra-reusable-workflows/.github/workflows/terraform-baseline.yml@main
     secrets: inherit
     with:
-      working-directory: '.'
+      working-directory: 'security/'
       state-key-prefix: 'security'
       stack-repository: 'cf-infra-security'
       stack-name: 'security'
