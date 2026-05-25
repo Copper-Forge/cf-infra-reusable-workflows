@@ -11,8 +11,8 @@ on:
         description: Slug to identify the environment/account for lookup
         type: string
         required: true
-      working-directory:
-        description: Working directory for Terraform commands
+      stack-directory:
+        description: Subdirectory in the repository where the Terraform code for this stack is located
         type: string
         default: '.'
         required: false
