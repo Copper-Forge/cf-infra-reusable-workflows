@@ -1,0 +1,84 @@
+name: Terraform Baseline Workflow
+
+on:
+  workflow_call:
+    inputs:
+      account-nickname:
+        description: Slug to identify the environment/account for lookup
+        type: string
+        required: true
+      stack-directory:
+        description: Subdirectory in the repository where the Terraform code for this stack is located
+        type: string
+        default: '.'
+        required: false
+      action:
+        description: Terraform action to perform
+        type: string
+        default: 'plan'
+        required: false
+      aws-region:
+        description: AWS region for credentials and Terraform backend access
+        type: string
+        default: 'us-west-2'
+        required: false
+      tf_version:
+        description: Terraform version to use
+        type: string
+        default: '1.15.4'
+        required: false
+      
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  baseline:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve account nickname
+        run: |
+          echo "Resolved account nickname: ${{ inputs.account-nickname }}"
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.SHARED_SERVICES_OIDC_ARN }}
+          aws-region: ${{ inputs.aws-region }}
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Download tfvars from S3
+        run: |
+          # Download base tfvars (required — fails if missing)
+          aws s3 cp \
+            "s3://copperforge-terraform-inputs/${{ inputs.account-nickname }}/${{ inputs.account-nickname }}.tfvars" \
+            "$GITHUB_WORKSPACE/base.tfvars"
+
+          # Download stack-level tfvars (optional — skipped when stack-directory is '.')
+          STACK_DIR="${{ inputs.stack-directory }}"
+          if [ "$STACK_DIR" != "." ]; then
+            aws s3 cp \
+              "s3://copperforge-terraform-inputs/${{ inputs.account-nickname }}/$STACK_DIR/terraform.tfvars" \
+              "$GITHUB_WORKSPACE/stack.tfvars" || true
+          fi
+
+          # Build combined -var-file flags
+          VAR_FILES="-var-file=$GITHUB_WORKSPACE/base.tfvars"
+          if [ -f "$GITHUB_WORKSPACE/stack.tfvars" ]; then
+            VAR_FILES="$VAR_FILES -var-file=$GITHUB_WORKSPACE/stack.tfvars"
+          fi
+          echo "TF_VAR_FILES=$VAR_FILES" >> "$GITHUB_ENV"
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ inputs.tf_version }}
+      - name: Terraform Init
+        working-directory: "${{ inputs.stack-directory }}/"
+        run: terraform init -backend-config="key=${{ inputs.account-nickname }}/${{ inputs.stack-directory }}/terraform.tfstate"
+      - name: Terraform Plan
+        if: inputs.action == 'plan'
+        working-directory: "${{ inputs.stack-directory }}/"
+        run: terraform plan ${{ env.TF_VAR_FILES }}
+      - name: Terraform Apply
+        if: inputs.action == 'apply'
+        working-directory: "${{ inputs.stack-directory }}/"
+        run: terraform apply -auto-approve ${{ env.TF_VAR_FILES }}
