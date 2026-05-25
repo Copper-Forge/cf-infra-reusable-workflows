@@ -11,7 +11,7 @@ on:
         description: Path to the tfvars file for the selected environment
         type: string
         required: true
-      environment-slug:
+      account-nickname:
         description: Slug to identify the environment/account for lookup
         type: string
         required: true
@@ -44,9 +44,9 @@ jobs:
   baseline:
     runs-on: ubuntu-latest
     steps:
-      - name: Resolve environment slug
+      - name: Resolve account nickname
         run: |
-          echo "Resolved environment slug: ${{ inputs.environment-slug }}"
+          echo "Resolved account nickname: ${{ inputs.account-nickname }}"
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -67,7 +67,7 @@ jobs:
           terraform_version: ${{ inputs.tf_version }}
       - name: Terraform Init
         working-directory: "${{ inputs.working-directory }}/"
-        run: terraform init -backend-config="key=${{ inputs.state-key-prefix }}/${{ inputs.environment-slug }}/terraform.tfstate"
+        run: terraform init -backend-config="key=${{ inputs.state-key-prefix }}/${{ inputs.account-nickname }}/terraform.tfstate"
       - name: Terraform Plan
         if: inputs.action == 'plan'
         working-directory: "${{ inputs.working-directory }}/"
