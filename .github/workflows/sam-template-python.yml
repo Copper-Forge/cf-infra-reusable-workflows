@@ -59,15 +59,11 @@ jobs:
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
+        env:
+          ACCOUNT_ID: ${{ fromJSON(vars.BASELINE_ACCOUNT_MAPPINGS)[inputs.account-nickname] }}
         with:
-          role-to-assume: ${{ format('arn:aws:iam::{0}:role/{1}', fromJSON(vars.BASELINE_ACCOUNT_MAPPINGS)[inputs.account-nickname], vars.OIDC_ROLE_NAME) }}
+          role-to-assume: ${{ format('arn:aws:iam::{0}:role/{1}', env.ACCOUNT_ID, vars.OIDC_ROLE_NAME) }}
           aws-region: ${{ inputs.aws-region }}
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3
-
-      - name: Install dependencies
-        run: uv sync
 
       - name: SAM validate
         working-directory: ${{ inputs.sam-directory }}
@@ -75,6 +71,12 @@ jobs:
             --config-env ${{ inputs.config-env }} \
             --config-file ${{ inputs.config-file }} \
             --template-file ${{ inputs.template-file }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install dependencies
+        run: uv sync
 
       - name: SAM build
         working-directory: ${{ inputs.sam-directory }}
