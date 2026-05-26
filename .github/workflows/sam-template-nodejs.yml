@@ -77,10 +77,7 @@ jobs:
 
       - name: SAM validate
         working-directory: ${{ inputs.sam-directory }}
-        run: sam validate \
-            --config-env ${{ inputs.config-env }} \
-            --config-file ${{ inputs.config-file }} \
-            --template-file ${{ inputs.template-file }}
+        run: sam validate --template ${{ inputs.template-file }}
 
       - name: SAM build
         working-directory: ${{ inputs.sam-directory }}
