@@ -57,7 +57,7 @@ jobs:
           STACK_DIR="${{ inputs.stack-directory }}"
           if [ "$STACK_DIR" != "." ]; then
             aws s3 cp \
-              "s3://copperforge-terraform-inputs/${{ inputs.account-nickname }}/$STACK_DIR/terraform.tfvars" \
+              "s3://copperforge-terraform-inputs/${{ inputs.account-nickname }}/$STACK_DIR/${{ inputs.account-nickname }}.tfvars" \
               "$GITHUB_WORKSPACE/stack.tfvars" || true
           fi
 
