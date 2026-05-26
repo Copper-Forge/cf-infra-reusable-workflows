@@ -93,8 +93,28 @@ jobs:
               --no-confirm-changeset \
               --no-fail-on-empty-changeset
 
+      - name: Check stack status
+        if: always()
+        id: stack-status
+        run: |
+          STATUS=$(aws cloudformation describe-stacks \
+              --stack-name ${{ inputs.stack-name }} \
+              --query 'Stacks[0].StackStatus' \
+              --output text 2>/dev/null || echo "STACK_NOT_FOUND")
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+          echo "Stack ${{ inputs.stack-name }} status: $STATUS"
+
+      - name: Delete stack in ROLLBACK_COMPLETE
+        if: always() && steps.stack-status.outputs.status == 'ROLLBACK_COMPLETE'
+        run: |
+          echo "Stack is in ROLLBACK_COMPLETE — deleting for clean re-deploy"
+          aws cloudformation delete-stack --stack-name ${{ inputs.stack-name }}
+          aws cloudformation wait stack-delete-complete --stack-name ${{ inputs.stack-name }}
+          echo "Stack deleted"
+          exit 1
+
       - name: Output stack information
-        working-directory: ${{ inputs.sam-directory }}
+        if: success()
         run: |
           echo "Stack deployed: ${{ inputs.stack-name }}"
           sam list stack-outputs --stack-name ${{ inputs.stack-name }} --output json
