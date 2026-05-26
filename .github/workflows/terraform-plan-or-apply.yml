@@ -59,12 +59,13 @@ jobs:
             "s3://copperforge-terraform-inputs/${{ inputs.account-nickname }}/${{ inputs.account-nickname }}.tfvars" \
             "$GITHUB_WORKSPACE/base.tfvars"
 
-          # Download stack-level tfvars (optional — skipped when stack-directory is '.')
+          # Download stack-level tfvars from S3 if it exists (optional)
           STACK_DIR="${{ inputs.stack-directory }}"
           if [ "$STACK_DIR" != "." ]; then
-            aws s3 cp \
-              "s3://copperforge-terraform-inputs/${{ inputs.account-nickname }}/$STACK_DIR/${{ inputs.account-nickname }}.tfvars" \
-              "$GITHUB_WORKSPACE/stack.tfvars" || true
+            S3_STACK_KEY="s3://copperforge-terraform-inputs/${{ inputs.account-nickname }}/$STACK_DIR/${{ inputs.account-nickname }}.tfvars"
+            if aws s3 ls "$S3_STACK_KEY" > /dev/null 2>&1; then
+              aws s3 cp "$S3_STACK_KEY" "$GITHUB_WORKSPACE/stack.tfvars"
+            fi
           fi
 
           # Build combined -var-file flags
