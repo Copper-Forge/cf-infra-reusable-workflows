@@ -65,6 +65,28 @@ jobs:
           role-to-assume: ${{ format('arn:aws:iam::{0}:role/{1}', env.ACCOUNT_ID, vars.OIDC_ROLE_NAME) }}
           aws-region: ${{ inputs.aws-region }}
 
+      - name: Resolve SAM config account placeholders
+        working-directory: ${{ inputs.sam-directory }}
+        env:
+          ACCOUNT_ID: ${{ fromJSON(vars.BASELINE_ACCOUNT_MAPPINGS)[inputs.account-nickname] }}
+        run: |
+          if ! [[ "$ACCOUNT_ID" =~ ^[0-9]{12}$ ]]; then
+            echo "Resolved account ID must be 12 digits for account nickname '${{ inputs.account-nickname }}'" >&2
+            exit 1
+          fi
+
+          if [ ! -f "${{ inputs.config-file }}" ]; then
+            echo "SAM config file not found: ${{ inputs.sam-directory }}/${{ inputs.config-file }}" >&2
+            exit 1
+          fi
+
+          perl -0pi -e 's/ACCOUNT_ID/$ENV{ACCOUNT_ID}/g' "${{ inputs.config-file }}"
+
+          if grep -n "ACCOUNT_ID" "${{ inputs.config-file }}"; then
+            echo "Unresolved ACCOUNT_ID placeholder remains in ${{ inputs.config-file }}" >&2
+            exit 1
+          fi
+
       - name: SAM validate
         working-directory: ${{ inputs.sam-directory }}
         run: sam validate --template ${{ inputs.template-file }}
