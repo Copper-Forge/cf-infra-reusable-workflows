@@ -32,7 +32,7 @@
 
 - **Symptom**: `terraform init` fails after credential configuration and checkout.
 - **Cause**: The backend key inputs do not match the intended environment, or the AWS role cannot access the backend.
-- **Fix**: Verify `state-key-prefix`, `environment-slug`, backend configuration, and permissions attached to the assumed role.
+- **Fix**: Verify `state-key-prefix`, `account-nickname`, backend configuration, and permissions attached to the assumed role.
 
 ### `Terraform Apply` never runs
 
@@ -42,10 +42,10 @@
 
 ## SAM Workflows
 
-### `fromJSON(vars.BASELINE_ACCOUNT_MAPPINGS)[inputs.environment-slug]` resolves incorrectly
+### `fromJSON(vars.BASELINE_ACCOUNT_MAPPINGS)[inputs.account-nickname]` resolves incorrectly
 
 - **Symptom**: The SAM workflow fails during `Configure AWS credentials (OIDC)`.
-- **Cause**: `BASELINE_ACCOUNT_MAPPINGS` is missing, is not valid JSON, or does not contain the selected `environment-slug`.
+- **Cause**: `BASELINE_ACCOUNT_MAPPINGS` is missing, is not valid JSON, or does not contain the selected `account-nickname`.
 - **Fix**: Verify the caller repository or organization variable is valid JSON and includes the environment slug key.
 
 ### `vars.OIDC_ROLE_NAME` is empty or wrong
@@ -89,5 +89,5 @@
 ### Unexpected environment or target account
 
 - **Symptom**: Logs show the wrong environment slug, state path, or assumed account.
-- **Cause**: The caller supplied the wrong `environment-slug`, `state-key-prefix`, or account mapping.
+- **Cause**: The caller supplied the wrong `account-nickname`, `state-key-prefix`, or account mapping.
 - **Fix**: Correct the caller workflow inputs or variables and rerun.

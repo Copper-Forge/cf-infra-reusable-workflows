@@ -7,17 +7,12 @@ on:
         description: SAM config environment (e.g., 'dev', 'prod')
         type: string
         required: true
-      stack-name:
-        description: CloudFormation stack name for output resolution
+      account-nickname:
+        description: Environment identifier for OIDC role assumption
         type: string
         required: true
-      aws-region:
-        description: AWS region for credentials and SAM deployment
-        type: string
-        default: 'us-west-2'
-        required: false
-      environment-slug:
-        description: Environment identifier for OIDC role assumption
+      stack-name:
+        description: CloudFormation stack name for output resolution
         type: string
         required: true
       sam-directory:
@@ -34,6 +29,11 @@ on:
         description: Path to SAM template file (e.g., 'infra/sam/template-node.yaml')
         type: string
         default: 'template.yaml'
+        required: false
+      aws-region:
+        description: AWS region for credentials and SAM deployment
+        type: string
+        default: 'us-west-2'
         required: false
 
 permissions:
@@ -60,7 +60,7 @@ jobs:
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ format('arn:aws:iam::{0}:role/{1}', fromJSON(vars.BASELINE_ACCOUNT_MAPPINGS)[inputs.environment-slug], vars.OIDC_ROLE_NAME) }}
+          role-to-assume: ${{ format('arn:aws:iam::{0}:role/{1}', fromJSON(vars.BASELINE_ACCOUNT_MAPPINGS)[inputs.account-nickname], vars.OIDC_ROLE_NAME) }}
           aws-region: ${{ inputs.aws-region }}
 
       - name: Install uv

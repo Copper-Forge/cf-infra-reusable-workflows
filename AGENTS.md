@@ -38,7 +38,7 @@ The current workflow files are:
 - `.github/workflows/sam-template-nodejs.yml` — Sets up Node.js and AWS SAM CLI, configures OIDC AWS authentication from caller variables, runs Node dependency installation/build, then runs SAM validate/build/deploy commands.
 - `.github/workflows/sam-template-python.yml` — Sets up Python, `uv`, and AWS SAM CLI, configures OIDC AWS authentication from caller variables, runs Python dependency sync, then runs SAM validate/build/deploy commands.
 
-The workflows keep environment naming generic through inputs such as `environment-slug`, `state-key-prefix`, `sam-directory`, and SAM config/template paths. Account-specific values stay in consuming repository secrets or variables.
+The workflows keep environment naming generic through inputs such as `account-nickname`, `state-key-prefix`, `sam-directory`, and SAM config/template paths. Account-specific values stay in consuming repository secrets or variables.
 
 ## Workspace Companion Loading
 
@@ -73,7 +73,7 @@ These inputs control the workflow behavior. All inputs are passed via the `with:
 | `tfvars-file` | string | **yes** | — | Path to the `.tfvars` file for the selected environment (for example `tfvars/dev.tfvars`). |
 | `tf_version` | string | no | `1.15.4` | Terraform version to install. Use semantic version strings (e.g., `1.15.4`, `1.16.0`). |
 | `action` | string | no | `plan` | Terraform action to perform. Options: `plan`, `apply`. Required because reusable workflows cannot directly read the caller's `workflow_dispatch` inputs. |
-| `environment-slug` | string | **yes** | — | Environment identifier used to build the Terraform state key and label the run. |
+| `account-nickname` | string | **yes** | — | Environment identifier used to build the Terraform state key and label the run. |
 
 ### Terraform Workflow Secrets
 
@@ -88,7 +88,7 @@ The Terraform workflow executes this sequence:
 3. **Checkout** — Clones the repository.
 4. **Validate tfvars input** — Fails early if the specified tfvars file is missing.
 5. **Setup Terraform** — Installs the specified Terraform version.
-6. **Terraform Init** — Runs `terraform init -backend-config="key=<state-key-prefix>/<environment-slug>/terraform.tfstate"`.
+6. **Terraform Init** — Runs `terraform init -backend-config="key=<state-key-prefix>/<account-nickname>/terraform.tfstate"`.
 7. **Terraform Plan** — Runs `terraform plan -var-file="<tfvars-file>"` when `action: plan`.
 8. **Terraform Apply** — Runs `terraform apply -auto-approve -var-file="<tfvars-file>"` when `action: apply`.
 
@@ -102,7 +102,7 @@ These inputs are shared by both SAM workflows unless noted.
 |-------|------|----------|---------|-------------|
 | `config-env` | string | **yes** | — | SAM config environment passed to SAM CLI. |
 | `stack-name` | string | **yes** | — | CloudFormation stack name used when listing stack outputs. |
-| `environment-slug` | string | **yes** | — | Environment identifier used to look up the target account from caller variables. |
+| `account-nickname` | string | **yes** | — | Environment identifier used to look up the target account from caller variables. |
 | `aws-region` | string | no | `us-west-2` | AWS region used for credential configuration and SAM commands. |
 | `sam-directory` | string | no | `.` | Working directory for SAM validate/build/deploy commands. |
 | `config-file` | string | no | `samconfig.toml` | SAM config file path passed to SAM CLI. |
@@ -113,7 +113,7 @@ These inputs are shared by both SAM workflows unless noted.
 
 The SAM workflows currently read caller variables:
 
-- `vars.BASELINE_ACCOUNT_MAPPINGS` — JSON mapping from `environment-slug` to account ID.
+- `vars.BASELINE_ACCOUNT_MAPPINGS` — JSON mapping from `account-nickname` to account ID.
 - `vars.OIDC_ROLE_NAME` — Role name used to construct the OIDC role ARN.
 
 ### SAM Node.js Workflow Behavior
@@ -197,7 +197,7 @@ jobs:
       working-directory: '.'
       state-key-prefix: 'security'
       tfvars-file: 'tfvars/dev.tfvars'
-      environment-slug: 'dev'
+      account-nickname: 'dev'
       aws-region: 'us-west-2'
       tf_version: '1.15.4'
       action: plan

@@ -49,7 +49,7 @@ jobs:
       working-directory: '.'
       state-key-prefix: 'security'
       tfvars-file: 'tfvars/dev.tfvars'
-      environment-slug: 'dev'
+      account-nickname: 'dev'
       aws-region: 'us-west-2'
       tf_version: '1.15.4'
       action: plan
@@ -64,7 +64,7 @@ jobs:
     with:
       config-env: dev
       stack-name: example-app-dev
-      environment-slug: dev
+      account-nickname: dev
       sam-directory: infra/sam
       config-file: samconfig.toml
       template-file: template.yaml
@@ -79,7 +79,7 @@ jobs:
     with:
       config-env: dev
       stack-name: example-app-dev
-      environment-slug: dev
+      account-nickname: dev
       sam-directory: infra/sam
       config-file: samconfig.toml
       template-file: template.yaml

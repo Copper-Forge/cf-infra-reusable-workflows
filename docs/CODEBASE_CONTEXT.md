@@ -64,7 +64,7 @@
 - Inputs:
   - `state-key-prefix` - required; used in backend state key.
   - `tfvars-file` - required; validated before Terraform runs.
-  - `environment-slug` - required; used in logs and backend key.
+  - `account-nickname` - required; used in logs and backend key.
   - `working-directory` - optional; default `.`.
   - `aws-region` - optional; default `us-west-2`.
   - `tf_version` - optional; default `1.15.4`.
@@ -77,7 +77,7 @@
   - Check out caller repository.
   - Validate `tfvars-file` inside `working-directory`.
   - Install Terraform.
-  - Run `terraform init -backend-config="key=<state-key-prefix>/<environment-slug>/terraform.tfstate"`.
+  - Run `terraform init -backend-config="key=<state-key-prefix>/<account-nickname>/terraform.tfstate"`.
   - Run `terraform plan -var-file="<tfvars-file>"` when `action == plan`.
   - Run `terraform apply -auto-approve -var-file="<tfvars-file>"` when `action == apply`.
 
@@ -86,7 +86,7 @@
 - Inputs:
   - `config-env` - required; passed to SAM CLI.
   - `stack-name` - required; used when listing stack outputs.
-  - `environment-slug` - required; lookup key into `vars.BASELINE_ACCOUNT_MAPPINGS`.
+  - `account-nickname` - required; lookup key into `vars.BASELINE_ACCOUNT_MAPPINGS`.
   - `aws-region` - optional; default `us-west-2`.
   - `node-version` - optional; default `24`.
   - `sam-directory` - optional; default `.`; working directory for SAM commands.
@@ -112,7 +112,7 @@
 - Inputs:
   - `config-env` - required; passed to SAM CLI.
   - `stack-name` - required; used when listing stack outputs.
-  - `environment-slug` - required; lookup key into `vars.BASELINE_ACCOUNT_MAPPINGS`.
+  - `account-nickname` - required; lookup key into `vars.BASELINE_ACCOUNT_MAPPINGS`.
   - `aws-region` - optional; default `us-west-2`.
   - `sam-directory` - optional; default `.`; working directory for SAM commands.
   - `config-file` - optional; default `samconfig.toml`.

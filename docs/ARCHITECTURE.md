@@ -37,11 +37,11 @@ flowchart LR
 - `.github/workflows/sam-template-nodejs.yml`
   - Reusable AWS SAM workflow for Node.js applications.
   - Installs the requested Node.js version, sets up the SAM CLI, configures AWS credentials, runs `npm ci`, runs `npm run build`, validates the SAM template, builds the SAM application, deploys it, and prints stack outputs.
-  - Resolves the role ARN from `vars.BASELINE_ACCOUNT_MAPPINGS`, `inputs.environment-slug`, and `vars.OIDC_ROLE_NAME`.
+  - Resolves the role ARN from `vars.BASELINE_ACCOUNT_MAPPINGS`, `inputs.account-nickname`, and `vars.OIDC_ROLE_NAME`.
 - `.github/workflows/sam-template-python.yml`
   - Reusable AWS SAM workflow for Python applications.
   - Installs Python `3.14`, sets up the SAM CLI, configures AWS credentials, installs `uv`, runs `uv sync`, validates the SAM template, builds the SAM application, deploys it, and prints stack outputs.
-  - Resolves the role ARN from `vars.BASELINE_ACCOUNT_MAPPINGS`, `inputs.environment-slug`, and `vars.OIDC_ROLE_NAME`.
+  - Resolves the role ARN from `vars.BASELINE_ACCOUNT_MAPPINGS`, `inputs.account-nickname`, and `vars.OIDC_ROLE_NAME`.
 - Consuming repository workflow
   - Owns triggers, branch policy, environment selection, source code, Terraform files, SAM templates, dependency manifests, and caller-specific inputs.
   - Invokes these workflows with `uses: .../.github/workflows/<workflow>.yml@main`.
@@ -51,7 +51,7 @@ flowchart LR
 - Keep shared GitHub Actions behavior in one repository.
 - Keep application code, Terraform code, SAM templates, and environment-specific configuration in consuming repositories.
 - Use OIDC instead of long-lived static AWS credentials.
-- Keep Terraform state key construction predictable with `state-key-prefix` plus `environment-slug`.
+- Keep Terraform state key construction predictable with `state-key-prefix` plus `account-nickname`.
 - Let SAM workflows derive AWS role ARNs from caller-provided variables instead of storing static role ARNs in this repository.
 - Keep runtime-specific SAM workflows separate because Node.js and Python dependency setup differ.
 
