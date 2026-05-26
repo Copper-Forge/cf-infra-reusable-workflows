@@ -12,6 +12,11 @@ on:
         type: string
         default: '.'
         required: false
+      stack-directory-prefix:
+        description: Prefix to prepend to the stack-directory if the stack-directory is heavily nested (such as in an app where it may be under infra/terraform/)
+        type: string
+        default: ''
+        required: false
       action:
         description: Terraform action to perform
         type: string
@@ -72,13 +77,13 @@ jobs:
         with:
           terraform_version: ${{ inputs.tf_version }}
       - name: Terraform Init
-        working-directory: "${{ inputs.stack-directory }}/"
+        working-directory: "${{ inputs.stack-directory-prefix }}${{ inputs.stack-directory }}/"
         run: terraform init -backend-config="key=${{ inputs.account-nickname }}/${{ inputs.stack-directory }}/terraform.tfstate"
       - name: Terraform Plan
         if: inputs.action == 'plan'
-        working-directory: "${{ inputs.stack-directory }}/"
+        working-directory: "${{ inputs.stack-directory-prefix }}${{ inputs.stack-directory }}/"
         run: terraform plan ${{ env.TF_VAR_FILES }}
       - name: Terraform Apply
         if: inputs.action == 'apply'
-        working-directory: "${{ inputs.stack-directory }}/"
+        working-directory: "${{ inputs.stack-directory-prefix }}${{ inputs.stack-directory }}/"
         run: terraform apply -auto-approve ${{ env.TF_VAR_FILES }}

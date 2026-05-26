@@ -26,7 +26,7 @@
 
 ## Entry Points
 
-- `.github/workflows/terraform-baseline.yml`
+- `.github/workflows/terraform-plan-or-apply.yml`
   - Trigger: `workflow_call`
   - Job: `baseline`
   - Purpose: shared Terraform baseline execution.

@@ -34,7 +34,7 @@ This repository defines parameterized, reusable GitHub Actions workflows for Cop
 
 The current workflow files are:
 
-- `.github/workflows/terraform-baseline.yml` — Performs OIDC-based AWS authentication, validates the selected tfvars file, installs Terraform, and runs `terraform plan` or `terraform apply` based on caller input.
+- `.github/workflows/terraform-plan-or-apply.yml` — Performs OIDC-based AWS authentication, validates the selected tfvars file, installs Terraform, and runs `terraform plan` or `terraform apply` based on caller input.
 - `.github/workflows/sam-template-nodejs.yml` — Sets up Node.js and AWS SAM CLI, configures OIDC AWS authentication from caller variables, runs Node dependency installation/build, then runs SAM validate/build/deploy commands.
 - `.github/workflows/sam-template-python.yml` — Sets up Python, `uv`, and AWS SAM CLI, configures OIDC AWS authentication from caller variables, runs Python dependency sync, then runs SAM validate/build/deploy commands.
 
@@ -53,7 +53,7 @@ If these companion repositories are open in the same workspace, you can use work
 
 ### File Location
 
-- `.github/workflows/terraform-baseline.yml`
+- `.github/workflows/terraform-plan-or-apply.yml`
 - `.github/workflows/sam-template-nodejs.yml`
 - `.github/workflows/sam-template-python.yml`
 
@@ -191,7 +191,7 @@ on:
 
 jobs:
   baseline:
-    uses: Copper-Forge/cf-infra-reusable-workflows/.github/workflows/terraform-baseline.yml@main
+    uses: Copper-Forge/cf-infra-reusable-workflows/.github/workflows/terraform-plan-or-apply.yml@main
     secrets: inherit
     with:
       working-directory: '.'
@@ -240,7 +240,7 @@ If consuming repositories use custom Terraform modules, they must follow the mod
 Consuming repositories pin to `@main`:
 
 ```yaml
-uses: Copper-Forge/cf-infra-reusable-workflows/.github/workflows/terraform-baseline.yml@main
+uses: Copper-Forge/cf-infra-reusable-workflows/.github/workflows/terraform-plan-or-apply.yml@main
 ```
 
 Use the same pattern for SAM workflows by replacing the workflow file name. At current org scale (few consuming repos), version tags are not needed. If the number of consuming repos grows significantly, consider introducing semver tags (e.g., `@v1.0`, `@v1.1`) and a release process. For now, `@main` is acceptable because breaking changes are rare and all consuming repos are within the same organization.

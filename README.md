@@ -8,7 +8,7 @@ This repository centralizes shared workflow logic for infrastructure repositorie
 
 It currently provides three reusable workflows:
 
-- `.github/workflows/terraform-baseline.yml` - Terraform init, plan, and apply for baseline stacks
+- `.github/workflows/terraform-plan-or-apply.yml` - Terraform init, plan, and apply for baseline stacks
 - `.github/workflows/sam-template-nodejs.yml` - Node.js SAM application validation, build, and deployment
 - `.github/workflows/sam-template-python.yml` - Python SAM application validation, build, and deployment
 
@@ -43,7 +43,7 @@ Terraform baseline caller job:
 ```yaml
 jobs:
   baseline:
-    uses: Copper-Forge/cf-infra-reusable-workflows/.github/workflows/terraform-baseline.yml@main
+    uses: Copper-Forge/cf-infra-reusable-workflows/.github/workflows/terraform-plan-or-apply.yml@main
     secrets: inherit
     with:
       working-directory: '.'

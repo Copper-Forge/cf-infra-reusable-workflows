@@ -4,7 +4,7 @@
 
 ```mermaid
 flowchart LR
-  Caller[Consuming repository workflow] --> Terraform[terraform-baseline.yml]
+  Caller[Consuming repository workflow] --> Terraform[terraform-plan-or-apply.yml]
   Caller --> SamNode[sam-template-nodejs.yml]
   Caller --> SamPython[sam-template-python.yml]
 
@@ -29,7 +29,7 @@ flowchart LR
 
 ## Major Components
 
-- `.github/workflows/terraform-baseline.yml`
+- `.github/workflows/terraform-plan-or-apply.yml`
   - Reusable Terraform workflow invoked through `workflow_call`.
   - Runs on `ubuntu-latest`.
   - Uses OIDC AWS authentication with `secrets.SHARED_SERVICES_OIDC_ARN`.
