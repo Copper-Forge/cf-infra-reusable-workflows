@@ -89,7 +89,7 @@
   - `account-nickname` - required; lookup key into `vars.BASELINE_ACCOUNT_MAPPINGS`.
   - `aws-region` - optional; default `us-west-2`.
   - `node-version` - optional; default `24`.
-  - `sam-directory` - optional; default `.`; working directory for SAM commands.
+  - `working-directory` - optional; default `.`; working directory for SAM commands.
   - `config-file` - optional; default `samconfig.toml`.
   - `template-file` - optional; default `template.yaml`.
 - Caller variables:
@@ -114,7 +114,7 @@
   - `stack-name` - required; used when listing stack outputs.
   - `account-nickname` - required; lookup key into `vars.BASELINE_ACCOUNT_MAPPINGS`.
   - `aws-region` - optional; default `us-west-2`.
-  - `sam-directory` - optional; default `.`; working directory for SAM commands.
+  - `working-directory` - optional; default `.`; working directory for SAM commands.
   - `config-file` - optional; default `samconfig.toml`.
   - `template-file` - optional; default `template.yaml`.
 - Caller variables:

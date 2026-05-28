@@ -65,7 +65,7 @@ jobs:
       config-env: dev
       stack-name: example-app-dev
       account-nickname: dev
-      sam-directory: infra/sam
+      working-directory: infra/sam
       config-file: samconfig.toml
       template-file: template.yaml
 ```
@@ -80,7 +80,7 @@ jobs:
       config-env: dev
       stack-name: example-app-dev
       account-nickname: dev
-      sam-directory: infra/sam
+      working-directory: infra/sam
       config-file: samconfig.toml
       template-file: template.yaml
 ```

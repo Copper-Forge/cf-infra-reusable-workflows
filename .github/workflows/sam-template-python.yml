@@ -15,7 +15,7 @@ on:
         description: CloudFormation stack name for output resolution
         type: string
         required: true
-      sam-directory:
+      working-directory:
         description: Directory containing samconfig and template files (e.g., 'infra/sam')
         type: string
         default: '.'
@@ -66,7 +66,7 @@ jobs:
           aws-region: ${{ inputs.aws-region }}
 
       - name: Resolve SAM config account placeholders
-        working-directory: ${{ inputs.sam-directory }}
+        working-directory: ${{ inputs.working-directory }}
         env:
           ACCOUNT_ID: ${{ fromJSON(vars.BASELINE_ACCOUNT_MAPPINGS)[inputs.account-nickname] }}
         run: |
@@ -76,7 +76,7 @@ jobs:
           fi
 
           if [ ! -f "${{ inputs.config-file }}" ]; then
-            echo "SAM config file not found: ${{ inputs.sam-directory }}/${{ inputs.config-file }}" >&2
+            echo "SAM config file not found: ${{ inputs.working-directory }}/${{ inputs.config-file }}" >&2
             exit 1
           fi
 
@@ -88,7 +88,7 @@ jobs:
           fi
 
       - name: SAM validate
-        working-directory: ${{ inputs.sam-directory }}
+        working-directory: ${{ inputs.working-directory }}
         run: sam validate --template ${{ inputs.template-file }}
 
       - name: Install uv
@@ -98,7 +98,7 @@ jobs:
         run: uv sync
 
       - name: SAM build
-        working-directory: ${{ inputs.sam-directory }}
+        working-directory: ${{ inputs.working-directory }}
         run: |
           sam build \
               --config-env ${{ inputs.config-env }} \
@@ -106,7 +106,7 @@ jobs:
               --template-file ${{ inputs.template-file }}
 
       - name: SAM deploy
-        working-directory: ${{ inputs.sam-directory }}
+        working-directory: ${{ inputs.working-directory }}
         run: |
           sam deploy \
               --config-env ${{ inputs.config-env }} \

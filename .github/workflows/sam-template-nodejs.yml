@@ -25,7 +25,7 @@ on:
         type: string
         default: '24'
         required: false
-      sam-directory:
+      working-directory:
         description: Directory containing samconfig and template files (e.g., 'infra/sam')
         type: string
         default: '.'
@@ -76,11 +76,11 @@ jobs:
         run: npm run build
 
       - name: SAM validate
-        working-directory: ${{ inputs.sam-directory }}
+        working-directory: ${{ inputs.working-directory }}
         run: sam validate --template ${{ inputs.template-file }}
 
       - name: SAM build
-        working-directory: ${{ inputs.sam-directory }}
+        working-directory: ${{ inputs.working-directory }}
         run: |
           sam build \
               --config-env ${{ inputs.config-env }} \
@@ -88,7 +88,7 @@ jobs:
               --template-file ${{ inputs.template-file }}
 
       - name: SAM deploy
-        working-directory: ${{ inputs.sam-directory }}
+        working-directory: ${{ inputs.working-directory }}
         run: |
           sam deploy \
               --config-env ${{ inputs.config-env }} \

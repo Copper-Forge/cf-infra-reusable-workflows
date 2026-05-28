@@ -32,12 +32,12 @@
   - The tfvars validation step should run before Terraform setup and commands.
 - SAM Node.js:
   - Required inputs are `config-env`, `stack-name`, and `account-nickname`.
-  - Optional inputs are `aws-region`, `node-version`, `sam-directory`, `config-file`, and `template-file`.
+  - Optional inputs are `aws-region`, `node-version`, `working-directory`, `config-file`, and `template-file`.
   - Caller variable requirements are `BASELINE_ACCOUNT_MAPPINGS` and `OIDC_ROLE_NAME`.
   - The workflow expects caller repository files needed by `npm ci`, `npm run build`, and SAM CLI commands.
 - SAM Python:
   - Required inputs are `config-env`, `stack-name`, and `account-nickname`.
-  - Optional inputs are `aws-region`, `sam-directory`, `config-file`, and `template-file`.
+  - Optional inputs are `aws-region`, `working-directory`, `config-file`, and `template-file`.
   - Caller variable requirements are `BASELINE_ACCOUNT_MAPPINGS` and `OIDC_ROLE_NAME`.
   - The workflow expects caller repository files needed by `uv sync` and SAM CLI commands.
 

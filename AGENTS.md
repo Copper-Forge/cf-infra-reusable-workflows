@@ -38,7 +38,7 @@ The current workflow files are:
 - `.github/workflows/sam-template-nodejs.yml` — Sets up Node.js and AWS SAM CLI, configures OIDC AWS authentication from caller variables, runs Node dependency installation/build, then runs SAM validate/build/deploy commands.
 - `.github/workflows/sam-template-python.yml` — Sets up Python, `uv`, and AWS SAM CLI, configures OIDC AWS authentication from caller variables, runs Python dependency sync, then runs SAM validate/build/deploy commands.
 
-The workflows keep environment naming generic through inputs such as `account-nickname`, `state-key-prefix`, `sam-directory`, and SAM config/template paths. Account-specific values stay in consuming repository secrets or variables.
+The workflows keep environment naming generic through inputs such as `account-nickname`, `state-key-prefix`, `working-directory`, and SAM config/template paths. Account-specific values stay in consuming repository secrets or variables.
 
 ## Workspace Companion Loading
 
@@ -104,7 +104,7 @@ These inputs are shared by both SAM workflows unless noted.
 | `stack-name` | string | **yes** | — | CloudFormation stack name used when listing stack outputs. |
 | `account-nickname` | string | **yes** | — | Environment identifier used to look up the target account from caller variables. |
 | `aws-region` | string | no | `us-west-2` | AWS region used for credential configuration and SAM commands. |
-| `sam-directory` | string | no | `.` | Working directory for SAM validate/build/deploy commands. |
+| `working-directory` | string | no | `.` | Working directory for SAM validate/build/deploy commands. |
 | `config-file` | string | no | `samconfig.toml` | SAM config file path passed to SAM CLI. |
 | `template-file` | string | no | `template.yaml` | SAM template path passed to SAM CLI. |
 | `node-version` | string | no | `24` | Node.js version for `sam-template-nodejs.yml` only. |

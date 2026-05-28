@@ -75,7 +75,7 @@
 ### `SAM validate` cannot find config or template files
 
 - **Symptom**: The workflow fails with a SAM CLI message about a missing config file or template file.
-- **Cause**: `sam-directory`, `config-file`, or `template-file` does not match the caller repository layout.
+- **Cause**: `working-directory`, `config-file`, or `template-file` does not match the caller repository layout.
 - **Fix**: Align those caller inputs with the location of `samconfig.toml` and the SAM template.
 
 ### `SAM deploy` reports no changes
