@@ -59,6 +59,7 @@ jobs:
         with:
           node-version: ${{ inputs.node-version }}
           cache: npm
+          cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
 
       - name: Setup SAM CLI
         uses: aws-actions/setup-sam@v2
@@ -70,9 +71,11 @@ jobs:
           aws-region: ${{ inputs.aws-region }}
 
       - name: Install dependencies
+        working-directory: ${{ inputs.working-directory }}
         run: npm ci
 
       - name: Build
+        working-directory: ${{ inputs.working-directory }}
         run: npm run build
 
       - name: SAM validate
