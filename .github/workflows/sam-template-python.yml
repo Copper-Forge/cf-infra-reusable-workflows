@@ -103,7 +103,6 @@ jobs:
           sam build \
               --config-env ${{ inputs.config-env }} \
               --config-file ${{ inputs.config-file }} \
-              --template-file ${{ inputs.template-file }}
 
       - name: SAM deploy
         working-directory: ${{ inputs.working-directory }}
@@ -111,7 +110,6 @@ jobs:
           sam deploy \
               --config-env ${{ inputs.config-env }} \
               --config-file ${{ inputs.config-file }} \
-              --template-file ${{ inputs.template-file }} \
               --no-confirm-changeset \
               --no-fail-on-empty-changeset
 
